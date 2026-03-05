@@ -5,3 +5,58 @@ generator client {
 datasource db {
   provider = "postgresql"
 }
+
+
+model BillingEvent {
+  id            String   @id @default(uuid())
+  externalId    String   @unique
+  customerId    String
+  eventType     EventType
+  quantity      Int
+  unitPrice     Decimal  @db.Decimal(10,2)
+  totalAmount   Decimal  @db.Decimal(10,2)
+  metadata      Json?
+  
+  createdAt     DateTime @default(now())
+  processedAt   DateTime?
+
+  invoiceId     String?
+  invoice       Invoice? @relation(fields: [invoiceId], references: [id])
+}
+
+model Invoice {
+  id          String   @id @default(uuid())
+  customerId  String
+  status      InvoiceStatus
+  totalAmount Decimal  @db.Decimal(10,2)
+
+  createdAt   DateTime @default(now())
+
+  items       InvoiceItem[]
+  events      BillingEvent[]
+}
+
+model InvoiceItem {
+  id          String   @id @default(uuid())
+  invoiceId   String
+  description String
+  quantity    Int
+  unitPrice   Decimal  @db.Decimal(10,2)
+  amount      Decimal  @db.Decimal(10,2)
+
+  createdAt   DateTime @default(now())
+
+  invoice     Invoice @relation(fields: [invoiceId], references: [id])
+}
+
+enum EventType {
+  API_CALL
+  STORAGE_USAGE
+  TRANSACTION
+}
+
+enum InvoiceStatus {
+  PENDING
+  PAID
+  FAILED
+}
