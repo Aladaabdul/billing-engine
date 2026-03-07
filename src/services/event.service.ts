@@ -19,31 +19,47 @@ export const createBillingEvent = async (data: CreateEventInput) => {
 
   const externalId = data.externalId ?? generateUUID();
 
-  let existingEvent = null
-
-  if (data.externalId) {
-    existingEvent = await prisma.billingEvent.findUnique({
-    where: { externalId: data.externalId }
-  });
-}
-
-  if (existingEvent) {
-    throw new Error("Event already processed");
-  }
-
   const totalAmount = data.quantity * data.unitPrice;
 
-  const event = await prisma.billingEvent.create({
-    data: {
-      externalId,
-      customerId: data.customerId,
-      eventType: data.eventType,
-      quantity: data.quantity,
-      unitPrice: new Prisma.Decimal(data.unitPrice),
-      totalAmount: new Prisma.Decimal(totalAmount),
-      metadata: data.metadata,
-    }
-  });
+  try {
 
-  return event;
+    const event = await prisma.$transaction(async (tx) => {
+
+      const createdEvent = await tx.billingEvent.create({
+        data: {
+          externalId,
+          customerId: data.customerId,
+          eventType: data.eventType,
+          quantity: data.quantity,
+          unitPrice: new Prisma.Decimal(data.unitPrice),
+          totalAmount: new Prisma.Decimal(totalAmount),
+          metadata: data.metadata,
+        }
+      });
+
+      await tx.outboxEvent.create({
+        data: {
+          eventType: "BILLING_EVENT_CREATED",
+          billingEventId: createdEvent.id,
+          status: "PENDING"
+        }
+      })
+
+      return createdEvent
+    })
+  
+    return event;
+
+  } catch (error: any) {
+    if (error.code === "P2002") {
+      const existingEvent = await prisma.billingEvent.findUnique({
+        where: { externalId }
+      });
+
+      if (existingEvent) {
+        return existingEvent
+      }
+    }
+    throw error;
+  }
 };

@@ -11,7 +11,7 @@ export const createEvent = async (req: Request, res: Response) => {
     const event = await createBillingEvent(payload);
 
     return res.status(201).json({
-      message: "Billing event created",
+      message: "Billing event processed",
       data: event
     });
     

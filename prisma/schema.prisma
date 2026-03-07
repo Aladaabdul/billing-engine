@@ -24,11 +24,14 @@ model BillingEvent {
   invoice       Invoice? @relation(fields: [invoiceId], references: [id])
 }
 
+
 model Invoice {
   id          String   @id @default(uuid())
   customerId  String
   status      InvoiceStatus
   totalAmount Decimal  @db.Decimal(10,2)
+  billingPeriodStart DateTime?
+  billingPeriodEnd   DateTime?
 
   createdAt   DateTime @default(now())
 
@@ -49,6 +52,30 @@ model InvoiceItem {
   invoice     Invoice @relation(fields: [invoiceId], references: [id])
 }
 
+
+model OutboxEvent {
+  id            String      @id @default(uuid())
+  eventType     String
+  billingEventId   String?
+  status        OutboxStatus @default(PENDING)
+
+  retryCount     Int      @default(0)
+  nextRetryAt    DateTime?
+
+  createdAt     DateTime    @default(now())
+  processedAt   DateTime?
+
+  @@index([status, createdAt])
+}
+
+
+enum OutboxStatus {
+  PENDING
+  PROCESSING
+  SENT
+  FAILED
+}
+
 enum EventType {
   API_CALL
   STORAGE_USAGE
@@ -56,6 +83,7 @@ enum EventType {
 }
 
 enum InvoiceStatus {
+  OPEN
   PENDING
   PAID
   FAILED
