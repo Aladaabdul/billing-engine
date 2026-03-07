@@ -18,8 +18,6 @@ export const sendBillingEventToQueue = async (eventId: string) => {
       }
     });
 
-    console.log("Publishing to queue", env.SQS_QUEUE_URL);
-
     const response = await sqsClient.send(command);
 
     console.log("Billing event published", {

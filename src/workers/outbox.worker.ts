@@ -1,6 +1,8 @@
 import { publishOutboxEvents } from "../services/outbox.service.js";
 
 async function startOutboxWorker() {
+
+  console.log("Outbox worker started")
   while (true) {
     try {
       await publishOutboxEvents();
