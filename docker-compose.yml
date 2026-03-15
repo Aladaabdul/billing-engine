@@ -1,0 +1,88 @@
+
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: billing-db
+    env_file:
+      - .env.db
+    volumes:
+      - billing_db_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: billing-redis
+    restart: always
+    ports:
+      - "6379:6379"
+
+  billing-api:
+    build: .
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/health"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    container_name: billing-api
+    ports:
+      - "8000:8000"
+      - "51212:51212"
+    environment:
+      RUN_MIGRATIONS: "true"
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+      - redis
+    command: node dist/src/server.js
+  
+  publish-worker:
+    build: .
+    container_name: billing-publish-worker
+    env_file:
+      - .env
+    environment:
+      RUN_MIGRATIONS: "false"
+    depends_on:
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+      billing-api:
+        condition: service_started
+    command: node dist/src/workers/outbox.worker.js
+  
+  consumer-worker:
+    build: .
+    container_name: billing-consumer-worker
+    env_file:
+      - .env
+    environment:
+      RUN_MIGRATIONS: "false"
+    depends_on:
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+      billing-api:
+        condition: service_started
+    command: node dist/src/workers/pull.worker.js
+
+  billing-worker:
+    build: .
+    container_name: billing-bullmq-worker
+    env_file:
+      - .env
+    environment:
+      RUN_MIGRATIONS: "false"
+    depends_on:
+      postgres:
+        condition: service_started
+      redis:
+        condition: service_started
+      billing-api:
+        condition: service_started
+    command: node dist/src/workers/billing.workers.js
+
+volumes:
+  billing_db_data:
