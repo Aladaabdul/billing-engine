@@ -11,10 +11,14 @@ router.get('/', async (_req, res) => {
       status: 'ok',
       database: 'connected',
     });
-  } catch (error) {
+  } catch (error: any) {
+    console.error("HEALTH ERROR:", error);
+
     res.status(500).json({
       status: 'error',
       database: 'disconnected',
+      message: error.message,
+      code: error.code
     });
   }
 });
