@@ -60,3 +60,19 @@ jobs:
         service: billing-service
         cluster: ${{ env.ECS_CLUSTER }}
         wait-for-service-stability: true
+
+    - name: Outbox worker task definition
+      id: outbox-task
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: .aws/outbox-worker-task.json
+        container-name: outbox-worker
+        image: ${{ steps.build-image.outputs.image }}
+
+    - name: Deploy outbox worker
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: ${{ steps.outbox-task.outputs.task-definition }}
+        service: outbox-worker
+        cluster: ${{ env.ECS_CLUSTER }}
+        wait-for-service-stability: true
