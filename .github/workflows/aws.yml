@@ -61,7 +61,7 @@ jobs:
         cluster: ${{ env.ECS_CLUSTER }}
         wait-for-service-stability: true
 
-    - name: Outbox worker task definition
+    - name: Publish worker task definition
       id: outbox-task
       uses: aws-actions/amazon-ecs-render-task-definition@v1
       with:
@@ -69,10 +69,26 @@ jobs:
         container-name: outbox-worker
         image: ${{ steps.build-image.outputs.image }}
 
-    - name: Deploy outbox worker
+    - name: Deploy publish worker
       uses: aws-actions/amazon-ecs-deploy-task-definition@v1
       with:
         task-definition: ${{ steps.outbox-task.outputs.task-definition }}
         service: outbox-worker
+        cluster: ${{ env.ECS_CLUSTER }}
+        wait-for-service-stability: true
+
+    - name: Publish consumer task definition
+      id: consumer-task
+      uses: aws-actions/amazon-ecs-render-task-definition@v1
+      with:
+        task-definition: .aws/consumer-worker-task.json
+        container-name: consumer-worker
+        image: ${{ steps.build-image.outputs.image }}
+
+    - name: Deploy consumer worker
+      uses: aws-actions/amazon-ecs-deploy-task-definition@v1
+      with:
+        task-definition: ${{ steps.consumer-task.outputs.task-definition }}
+        service: consumer-worker
         cluster: ${{ env.ECS_CLUSTER }}
         wait-for-service-stability: true
